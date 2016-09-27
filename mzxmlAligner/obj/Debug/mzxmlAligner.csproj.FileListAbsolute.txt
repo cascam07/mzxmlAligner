@@ -1,0 +1,6 @@
+c:\users\case159\documents\visual studio 2013\Projects\mzxmlAligner\mzxmlAligner\bin\Debug\mzxmlAligner.exe.config
+c:\users\case159\documents\visual studio 2013\Projects\mzxmlAligner\mzxmlAligner\bin\Debug\mzxmlAligner.exe
+c:\users\case159\documents\visual studio 2013\Projects\mzxmlAligner\mzxmlAligner\bin\Debug\mzxmlAligner.pdb
+c:\users\case159\documents\visual studio 2013\Projects\mzxmlAligner\mzxmlAligner\obj\Debug\mzxmlAligner.csprojResolveAssemblyReference.cache
+c:\users\case159\documents\visual studio 2013\Projects\mzxmlAligner\mzxmlAligner\obj\Debug\mzxmlAligner.exe
+c:\users\case159\documents\visual studio 2013\Projects\mzxmlAligner\mzxmlAligner\obj\Debug\mzxmlAligner.pdb
