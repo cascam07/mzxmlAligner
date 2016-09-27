@@ -4,3 +4,5 @@ c:\users\case159\documents\visual studio 2013\Projects\mzxmlAligner\mzxmlAligner
 c:\users\case159\documents\visual studio 2013\Projects\mzxmlAligner\mzxmlAligner\obj\Debug\mzxmlAligner.csprojResolveAssemblyReference.cache
 c:\users\case159\documents\visual studio 2013\Projects\mzxmlAligner\mzxmlAligner\obj\Debug\mzxmlAligner.exe
 c:\users\case159\documents\visual studio 2013\Projects\mzxmlAligner\mzxmlAligner\obj\Debug\mzxmlAligner.pdb
+C:\Users\case159\Documents\Visual Studio 2013\Projects\mzxmlAligner\mzxmlAligner\bin\Debug\CommandLine.dll
+C:\Users\case159\Documents\Visual Studio 2013\Projects\mzxmlAligner\mzxmlAligner\bin\Debug\CommandLine.xml

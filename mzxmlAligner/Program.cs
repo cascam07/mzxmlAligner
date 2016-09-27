@@ -7,33 +7,57 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml;
 using System.Xml.Linq;
+using CommandLine;
 
 namespace mzxmlAligner
 {
-    class Program
+    internal class Program
     {
         [STAThread]
-        static void Main(string[] args)
+        private static void Main(string[] args)
+        {
+
+            string invokedVerb = "Nothing";
+            object invokedVerbInstance = null;
+            var options = new Options();
+            if (!Parser.Default.ParseArguments(args, options, (verb, subOptions) =>
+            {
+                invokedVerb = verb;
+                invokedVerbInstance = subOptions;
+            })
+                )
+            {
+                Environment.Exit(Parser.DefaultExitCodeFail);
+            }
+
+            if (invokedVerb == "align")
+            {
+                ExecuteAligner((AlignOptions) invokedVerbInstance);
+            }
+
+            if (invokedVerb == "replace")
+            {
+                ExecuteReplacer((ReplaceOptions) invokedVerbInstance);
+            }
+        }
+
+
+        private static void ExecuteAligner(AlignOptions options)
         {
             try
             {
-                string path;
-                Console.WriteLine("Select alignment map with headers \"Name\", \"Slope\", \"Intecept\"");
-                var alignmentFile = ReadLines(out path);
-                Console.WriteLine("Select folder where mzXML files are located.");
-                FolderBrowserDialog fbd = new FolderBrowserDialog { SelectedPath = path };
-                //FolderBrowserDialog fbd = new FolderBrowserDialog();
-                DialogResult result = fbd.ShowDialog();
-                var dirPath = fbd.SelectedPath;
+                string mapPath = options.alignmentMap;
+                var alignmentFile = ReadLines(mapPath);
+                string dirPath = options.files;
                 string[] rawFiles = Directory.GetFiles(dirPath, "*.mzXML");
-             
+
                 Dictionary<string, Tuple<double, double>> alignmentMaps = BuildAlignmentMaps(alignmentFile);
                 foreach (var key in alignmentMaps.Keys)
                 {
-                    AlignFile(dirPath+"\\"+key, alignmentMaps[key].Item1, alignmentMaps[key].Item2);
+                    AlignFile(dirPath + "\\" + key, alignmentMaps[key].Item1, alignmentMaps[key].Item2);
                 }
-
                 Console.ReadLine();
             }
             catch (Exception ex)
@@ -43,16 +67,41 @@ namespace mzxmlAligner
             }
         }
 
-        private static string[] ReadLines(out string path)
+        private static void ExecuteReplacer(ReplaceOptions options)
         {
-            OpenFileDialog openFileDialog1 = new OpenFileDialog
+            try
             {
-                InitialDirectory = "Libraries\\Documents",
-                Filter = "csv files (*.csv)|*.csv|All files (*.*)|*.*"
-            };
-            openFileDialog1.ShowDialog();
-            string[] file = File.ReadAllLines(openFileDialog1.FileName);
-            path = Path.GetDirectoryName(openFileDialog1.FileName);
+                string scansPath = options.scansFiles;
+                string dirPath = options.files;
+                string[] scansFiles = Directory.GetFiles(scansPath, "*_MS_scans.csv");
+                string[] rawFiles = Directory.GetFiles(dirPath, "*.mzXML");
+
+                foreach (var scanfile in scansFiles)
+                {
+                    string rawname = scanfile.Split(new string[] {"\\"}, StringSplitOptions.None).Last();
+                
+                    rawname = rawname.Replace("_MS_scans.csv", ".mzXML");
+                    var match = from f in rawFiles where f.Contains(rawname) select f;
+                    if (match.Any())
+                    {
+                        var rawFile = match.FirstOrDefault();
+                        ReplaceTimes(rawFile, scanfile);
+                    }
+                    
+                }
+                Console.ReadLine();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                Console.ReadLine();
+            }
+        }
+
+
+        private static string[] ReadLines(string path)
+        {
+            string[] file = File.ReadAllLines(path);
             return file;
         }
 
@@ -94,7 +143,7 @@ namespace mzxmlAligner
 
         private static void AlignFile(string rawFile, double slope, double intercept)
         {
-            string[] separator = { "," };
+            string[] separator = {","};
             StreamReader mzXML = new StreamReader(rawFile);
             StringBuilder correctedFile = new StringBuilder();
             Regex rtRegex1 = new Regex(@"\d+\.\d+");
@@ -145,6 +194,110 @@ namespace mzxmlAligner
                 }
             }
             Console.WriteLine("Successfully aligned " + rawFile);
+        }
+
+
+        private static void ReplaceTimes(string rawFile, string scanFile)
+        {
+            char[] delim = new[] {','};
+            StringBuilder correctedFile = new StringBuilder();
+            var scans = File.ReadLines(scanFile).ToList();
+            var splitLine = scans[0].Replace("\"","").Split(delim).ToList();
+            var timeIndex = splitLine.IndexOf("corrected_time");
+            var scanIndex = splitLine.IndexOf("scan_num");
+            /*
+            using (XmlReader reader = XmlReader.Create(rawFile))
+            {
+                XmlWriterSettings settings = new XmlWriterSettings();
+                settings.Indent = true;
+
+                using (XmlWriter writer = XmlWriter.Create(rawFile.Replace(".mzXML", "_Aligned.mzXML"), settings))
+                {
+                    while (reader.Read())
+                    {
+                        reader.ReadToFollowing("scan");
+                        reader.ReadAttributeValue();
+                        writer.WriteNode(reader,false);
+                        writer.Flush();
+                    }
+                    writer.Close();
+                }
+                reader.Close();   
+            }*/
+
+            XDocument doc = XDocument.Load(rawFile);
+
+            var nodes = doc.Descendants();
+            var scanNodes = from node in nodes where node.Name.LocalName == "scan" select node;
+            for (int line = 1; line < scans.Count; line++)
+            {
+                var linesplit = scans[line].Split(delim);
+                var scan = linesplit[scanIndex];
+                var newTime = linesplit[timeIndex];
+                var desiredScan = scanNodes.FirstOrDefault(element => element.FirstAttribute.Value.Equals(scan));
+                //var rt = desiredScan.Attribute("retentionTime").Value;
+                //rt = String.Format("PT{0}S", Double.Parse(newTime) * 60)
+                desiredScan.Attribute("retentionTime").Value = String.Format("PT{0}S", Double.Parse(newTime) * 60);
+            }
+            doc.Save(rawFile.Replace(".mzXML", "_Aligned.mzXML"));
+
+
+
+            /*
+            string[] separator = {","};
+            StreamReader mzXML = new StreamReader(rawFile);
+            StringBuilder correctedFile = new StringBuilder();
+            Regex rtRegex1 = new Regex(@"\d+\.\d+");
+            Regex rtRegex2 = new Regex(@"\d+");
+            Regex scanNumRegex = new Regex(@"");
+             
+            using (StreamWriter AlignedFile = new StreamWriter(rawFile.Replace(".mzXML", "_Aligned.mzXML")))
+            {
+                int scanCount = 1;
+                while (true)
+                {
+                    string line = mzXML.ReadLine();
+                    if (line == null)
+                    {
+                        break;
+                    }
+                    Match match1 = Regex.Match(line, @"retentionTime=.PT[0-9]*.[0-9]*S.");
+                    Match match2 = Regex.Match(line, @"retentionTime=.PT[0-9]*S.");
+                    if (match1.Success || match2.Success)
+                    {
+                        string newLine;
+                        if (match2.Success)
+                        {
+                            var oldTime = double.Parse(Regex.Match(line, @"\d+").Value);
+                            var correctTime = newTime*60;
+                            if (correctTime < 0)
+                            {
+                                correctTime = 0;
+                            }
+                            newLine = rtRegex2.Replace(line, correctTime.ToString());
+                        }
+                        else
+                        {
+                            var oldTime = double.Parse(Regex.Match(line, @"\d+\.\d+").Value);
+                            var correctTime = newTime * 60;
+                            if (correctTime < 0)
+                            {
+                                correctTime = 0;
+                            }
+                            newLine = rtRegex1.Replace(line, correctTime.ToString());
+                        }
+                        AlignedFile.WriteLine(newLine);
+                        scanCount++;
+                    }
+                    else
+                    {
+                        AlignedFile.WriteLine(line);
+                    }
+                }
+            }
+            Console.WriteLine("Successfully aligned " + rawFile);
+        }*/
+
         }
     }
 }
