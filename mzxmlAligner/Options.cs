@@ -15,7 +15,13 @@ namespace mzxmlAligner
         [VerbOption("replace", HelpText = "Use a directory of *MS_scans.csv files with corrected retention time columns to correct RT fields in mzXML files")]
         public ReplaceOptions ReplaceVerb { get; set; }
 
-
+        [HelpOption(HelpText = "Display this help screen.")]
+        public string GetUsage()
+        {
+            var help = new StringBuilder();
+            help.AppendLine("Options are:\n\talign -a [path of alignment map] -f [path of files to align]");
+            return help.ToString();
+        }
         
 
 

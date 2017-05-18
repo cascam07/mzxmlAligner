@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.Linq;
+using System.Xml.Schema;
 using CommandLine;
 
 namespace mzxmlAligner
@@ -22,6 +23,13 @@ namespace mzxmlAligner
             string invokedVerb = "Nothing";
             object invokedVerbInstance = null;
             var options = new Options();
+
+            if (args.Length == 0)
+            {
+                Console.Write(options.GetUsage());
+                Environment.Exit(Parser.DefaultExitCodeFail);
+            }
+
             if (!Parser.Default.ParseArguments(args, options, (verb, subOptions) =>
             {
                 invokedVerb = verb;
@@ -37,9 +45,9 @@ namespace mzxmlAligner
                 ExecuteAligner((AlignOptions) invokedVerbInstance);
             }
 
-            if (invokedVerb == "replace")
+            else
             {
-                ExecuteReplacer((ReplaceOptions) invokedVerbInstance);
+                Console.Write(options.GetUsage());
             }
         }
 
